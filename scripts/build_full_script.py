@@ -615,6 +615,7 @@ def build_planning_bible(project_dir: Path, delivery_dir: Path) -> str:
 def build_manifest(project_dir: Path, delivery_dir: Path, episode_files: list[Path]) -> str:
     metadata = project_metadata(project_dir)
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M")
+    delivery_mode = project_delivery_mode(project_dir)
     first_ep = detect_episode_number(episode_files[0])
     last_ep = detect_episode_number(episode_files[-1])
     episode_numbers = [detect_episode_number(path) for path in episode_files]
@@ -628,11 +629,14 @@ def build_manifest(project_dir: Path, delivery_dir: Path, episode_files: list[Pa
         full_status = "按当前已完成集数汇总"
     else:
         full_status = "是" if episode_numbers == list(range(1, target_episodes + 1)) else "否"
-    existing_files = sorted(
-        [path.name for path in delivery_dir.glob("*.md") if path.name != PREFERRED_FILES["manifest"]]
-    )
+    existing_files = sorted({path.name for path in delivery_dir.glob("*.md")} | {PREFERRED_FILES["manifest"]})
     if PREFERRED_FILES["planning_bible"] in existing_files:
         existing_files = [name for name in existing_files if name != "剧本策划总册.md"]
+    version_display = (
+        "production-enhanced 制作增强正式交付版"
+        if delivery_mode == "production-enhanced"
+        else "standard 标准正式交付版"
+    )
     if missing_numbers:
         missing_display = ", ".join(f"第{number:03d}集" for number in missing_numbers[:8])
         if len(missing_numbers) > 8:
@@ -649,7 +653,7 @@ def build_manifest(project_dir: Path, delivery_dir: Path, episode_files: list[Pa
             f"- 项目名：{metadata['project_name']}",
             f"- 市场：{market_display}",
             f"- 形态：{metadata['shape']}",
-            "- 当前交付版本：自动汇总版",
+            f"- 当前交付版本：{version_display}",
             f"- 交付日期：{generated_at}",
             f"- 目标总集数：{target_display}",
             "",
@@ -668,7 +672,7 @@ def build_manifest(project_dir: Path, delivery_dir: Path, episode_files: list[Pa
             "## 四、版本说明",
             "",
             f"- 本版基于已完成单集稿自动汇总：第{first_ep:03d}集-第{last_ep:03d}集",
-            "- 说明：本清单由汇总脚本自动生成，必要时可人工补充制作备注。",
+            "- 说明：本清单由汇总脚本按当前 deliveryMode 生成；制作备注以交付包内对应文件为准。",
             "",
         ]
     )
