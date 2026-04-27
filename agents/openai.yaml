@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI漫剧策划与剧本生成"
+  short_description: "AI漫剧立项、策划、分集剧本与交付"
+  default_prompt: "使用 $short-drama-scriptwriter 为抖音国内或 TikTok 欧美 AI 漫剧推进立项、策划、分集场次执行稿、复盘和 Markdown 交付。"

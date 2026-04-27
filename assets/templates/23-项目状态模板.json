@@ -1,0 +1,38 @@
+{
+  "currentStep": "立项",
+  "projectPhase": "立项",
+  "lastCompletedPhase": "",
+  "deliveryMode": "planning-only",
+  "outlineProgress": {
+    "completedRanges": [],
+    "currentRange": "",
+    "nextRange": "",
+    "allOutlineGenerated": false
+  },
+  "scriptProgress": {
+    "completedRanges": [],
+    "currentRange": "",
+    "nextRange": "",
+    "fullScriptReviewDone": false
+  },
+  "changeControl": {
+    "pendingRollback": false,
+    "sourceStep": "",
+    "sourceFiles": [],
+    "affectedGates": [],
+    "reason": "",
+    "triggeredAt": "",
+    "resolvedAt": ""
+  },
+  "lastQcStep": "",
+  "lastIndependentReviewMode": "",
+  "lastStateUpdatedAt": "",
+  "qcStatus": {
+    "kickoff": "未检查",
+    "planningFoundation": "未检查",
+    "planningStructure": "未检查",
+    "outline": "未检查",
+    "scriptBatches": [],
+    "delivery": "未检查"
+  }
+}

@@ -1,0 +1,33 @@
+# Python runtime/cache artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Test and coverage artifacts
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Local virtual environments and tooling caches
+.venv/
+venv/
+env/
+.mypy_cache/
+.ruff_cache/
+.cache/
+
+# Local-only environment/config files
+.env
+.env.*
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Temporary logs and scratch files
+*.log
+tmp/
+temp/
