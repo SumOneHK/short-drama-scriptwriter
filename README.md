@@ -23,6 +23,7 @@
 │   └── openai.yaml                  # Codex/agent 展示信息
 ├── assets/
 │   └── templates/                   # 各阶段产物模板
+├── LICENSE                          # MIT 开源许可证
 ├── references/                      # 流程、市场、剧本、质检、交付规则
 ├── scripts/
 │   ├── build_full_script.py         # 交付汇总脚本
@@ -145,4 +146,4 @@ python3 -m unittest discover -s tests
 
 ## License
 
-本仓库当前尚未包含许可证文件。正式开源前建议添加 `LICENSE`，例如 MIT、Apache-2.0 或其他符合你发布目标的开源许可证。
+本项目采用 MIT License，详见 [LICENSE](LICENSE)。
