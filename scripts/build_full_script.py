@@ -41,20 +41,42 @@ PREFERRED_DIRS = {
     "delivery": ["03-交付", "04-交付", "05-交付", "05-delivery"],
 }
 
-CANONICAL_MARKETS = {"抖音国内", "TikTok 欧美"}
+CANONICAL_PLATFORMS = {"抖音", "TikTok"}
+PLATFORM_ALIASES = {
+    "抖音": "抖音",
+    "抖音国内": "抖音",
+    "国内抖音": "抖音",
+    "TikTok": "TikTok",
+    "tiktok": "TikTok",
+    "TikTok 欧美": "TikTok",
+    "TikTok欧美": "TikTok",
+    "TikTok 欧美市场": "TikTok",
+    "TikTok美国": "TikTok",
+    "TikTok 美国": "TikTok",
+    "TikTok 美国市场": "TikTok",
+    "TikTok US": "TikTok",
+    "TikTok USA": "TikTok",
+}
+CANONICAL_MARKETS = {"国内", "美国英语首版", "泛欧美", "东南亚", "拉美"}
 MARKET_ALIASES = {
-    "抖音国内": "抖音国内",
-    "抖音": "抖音国内",
-    "国内": "抖音国内",
-    "中国国内": "抖音国内",
-    "TikTok 欧美": "TikTok 欧美",
-    "TikTok欧美": "TikTok 欧美",
-    "TikTok 欧美市场": "TikTok 欧美",
-    "TikTok美国": "TikTok 欧美",
-    "TikTok 美国": "TikTok 欧美",
-    "TikTok 美国市场": "TikTok 欧美",
-    "TikTok US": "TikTok 欧美",
-    "TikTok USA": "TikTok 欧美",
+    "抖音国内": "国内",
+    "抖音": "国内",
+    "国内": "国内",
+    "中国国内": "国内",
+    "TikTok 欧美": "泛欧美",
+    "TikTok欧美": "泛欧美",
+    "TikTok 欧美市场": "泛欧美",
+    "欧美": "泛欧美",
+    "泛欧美": "泛欧美",
+    "TikTok美国": "美国英语首版",
+    "TikTok 美国": "美国英语首版",
+    "TikTok 美国市场": "美国英语首版",
+    "TikTok US": "美国英语首版",
+    "TikTok USA": "美国英语首版",
+    "美国英语": "美国英语首版",
+    "美国英语首版": "美国英语首版",
+    "东南亚": "东南亚",
+    "拉美": "拉美",
 }
 CHINESE_SECTION_NUMBERS = [
     "一",
@@ -129,11 +151,29 @@ def extract_field(text: str, label: str) -> str | None:
     return None
 
 
+def normalize_platform(value: str | None) -> str:
+    if not value:
+        return ""
+    normalized = re.sub(r"\s+", " ", value.replace("`", "").strip())
+    return PLATFORM_ALIASES.get(normalized, normalized if normalized in CANONICAL_PLATFORMS else "")
+
+
 def normalize_market(value: str | None) -> str:
     if not value:
         return ""
     normalized = re.sub(r"\s+", " ", value.replace("`", "").strip())
-    return MARKET_ALIASES.get(normalized, normalized if normalized in CANONICAL_MARKETS else "")
+    return MARKET_ALIASES.get(normalized, normalized if normalized in CANONICAL_MARKETS else normalized)
+
+
+def infer_platform_from_market(market: str | None) -> str:
+    if not market:
+        return ""
+    normalized = normalize_market(market)
+    if normalized == "国内":
+        return "抖音"
+    if normalized:
+        return "TikTok"
+    return ""
 
 
 def extract_episode_count(value: str | None) -> str:
@@ -284,6 +324,7 @@ def project_metadata(project_dir: Path) -> dict[str, str]:
 
     data = {
         "project_name": project_dir.name,
+        "platform": "",
         "market": "",
         "format": "场次执行稿",
         "shape": "AI漫剧",
@@ -293,17 +334,27 @@ def project_metadata(project_dir: Path) -> dict[str, str]:
     if brief_file and brief_file.exists():
         text = read_text(brief_file)
         data["project_name"] = extract_field(text, "项目名") or data["project_name"]
-        data["market"] = normalize_market(extract_field(text, "目标市场")) or data["market"]
+        platform = extract_field(text, "发行平台")
+        market = extract_field(text, "目标市场")
+        data["platform"] = normalize_platform(platform) or normalize_platform(market) or data["platform"]
+        data["market"] = normalize_market(market) or data["market"]
+        data["shape"] = extract_field(text, "内容形态") or data["shape"]
         target = extract_episode_count(extract_field(text, "总集数"))
         if target:
             data["target_episodes"] = target
 
     if lock_summary and lock_summary.exists():
         text = read_text(lock_summary)
-        data["market"] = normalize_market(extract_field(text, "目标市场")) or data["market"]
+        platform = extract_field(text, "发行平台")
+        market = extract_field(text, "目标市场")
+        data["platform"] = normalize_platform(platform) or normalize_platform(market) or data["platform"]
+        data["market"] = normalize_market(market) or data["market"]
         target = extract_episode_count(extract_field(text, "总集数"))
         if target:
             data["target_episodes"] = target
+
+    if not data["platform"]:
+        data["platform"] = infer_platform_from_market(data["market"])
 
     # 项目设定.md 不再当成元数据真相源；市场和总集数以 项目简报.md / 锁题摘要.md 为准。
     # 这里只是兼容历史项目里 项目设定.md 含 "推荐规格" 字段的情况，未来可彻底删除。
@@ -332,15 +383,15 @@ def detect_enhanced_recommendation_reasons(project_dir: Path) -> list[str]:
     """检测项目是否应当推荐 production-enhanced 模式。
 
     返回触发原因列表；空列表表示不强烈推荐。判断依据：
-    - 海外项目（市场为 TikTok 欧美）
+    - 出海项目（发行平台为 TikTok）
     - 长线项目（总集数 >= 30）
     - 资产重项目（已存在 场景参考卡.md / 道具设定卡.md）
     """
     reasons: list[str] = []
     metadata = project_metadata(project_dir)
 
-    if metadata.get("market") == "TikTok 欧美":
-        reasons.append("项目市场为 TikTok 欧美，需要 海外制作版分场表 等增强包文件")
+    if metadata.get("platform") == "TikTok":
+        reasons.append("发行平台为 TikTok 的出海项目，需要 海外制作版分场表 等增强包文件")
 
     target_text = metadata.get("target_episodes") or ""
     if target_text:
@@ -399,9 +450,9 @@ def required_enhanced_delivery_files(project_dir: Path, delivery_dir: Path) -> l
         ("制作理解稿", delivery_dir / PREFERRED_FILES["production_brief"]),
         ("制作交付参数表", delivery_dir / PREFERRED_FILES["production_params"]),
     ]
-    if metadata.get("market") == "抖音国内":
+    if metadata.get("platform") == "抖音":
         required.append(("信息流投放素材切片说明", delivery_dir / PREFERRED_FILES["douyin_clip_brief"]))
-    if metadata.get("market") == "TikTok 欧美":
+    if metadata.get("platform") == "TikTok":
         required.append(("海外制作版分场表", delivery_dir / PREFERRED_FILES["overseas_scene_table"]))
 
     planning_dir = resolve_existing_dir(project_dir, PREFERRED_DIRS["planning"])
@@ -504,6 +555,7 @@ def build_full_script(project_dir: Path, episode_files: list[Path]) -> str:
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M")
     first_ep = detect_episode_number(episode_files[0])
     last_ep = detect_episode_number(episode_files[-1])
+    platform_display = metadata["platform"] or "未在项目文件中写明"
     market_display = metadata["market"] or "未在项目文件中写明"
 
     header = [
@@ -511,7 +563,8 @@ def build_full_script(project_dir: Path, episode_files: list[Path]) -> str:
         "",
         "## 交付信息",
         f"- 项目目录：`{project_dir}`",
-        f"- 市场：{market_display}",
+        f"- 发行平台：{platform_display}",
+        f"- 目标市场：{market_display}",
         f"- 形态：{metadata['shape']}",
         f"- 正文格式：{metadata['format']}",
         f"- 汇总范围：第{first_ep:03d}集-第{last_ep:03d}集",
@@ -551,6 +604,7 @@ def build_planning_bible(project_dir: Path, delivery_dir: Path) -> str:
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M")
     planning_dir = resolve_existing_dir(project_dir, PREFERRED_DIRS["planning"])
     intake_dir = resolve_existing_dir(project_dir, PREFERRED_DIRS["intake"])
+    platform_display = metadata["platform"] or "未在项目文件中写明"
     market_display = metadata["market"] or "未在项目文件中写明"
     include_enhanced = project_delivery_mode(project_dir) == "production-enhanced"
 
@@ -559,7 +613,8 @@ def build_planning_bible(project_dir: Path, delivery_dir: Path) -> str:
         "",
         "## 交付信息",
         f"- 项目目录：`{project_dir}`",
-        f"- 市场：{market_display}",
+        f"- 发行平台：{platform_display}",
+        f"- 目标市场：{market_display}",
         f"- 汇总时间：{generated_at}",
         "- 说明：本文件在交付阶段汇总已通过质检的分项策划，用于统一交接项目定位、结构推进、世界、角色和关键资产，不替代 `完整剧本总稿.md`。",
         "",
@@ -590,7 +645,7 @@ def build_planning_bible(project_dir: Path, delivery_dir: Path) -> str:
             "信息流投放素材切片说明",
             PREFERRED_FILES["douyin_clip_brief"],
             [delivery_dir / PREFERRED_FILES["douyin_clip_brief"]],
-            include_enhanced and market_display == "抖音国内" and (delivery_dir / PREFERRED_FILES["douyin_clip_brief"]).exists(),
+            include_enhanced and metadata.get("platform") == "抖音" and (delivery_dir / PREFERRED_FILES["douyin_clip_brief"]).exists(),
         ),
         ("场景参考卡", "场景参考卡.md", [delivery_dir / "场景参考卡.md"], (delivery_dir / "场景参考卡.md").exists()),
         ("道具设定卡", "道具设定卡.md", [delivery_dir / "道具设定卡.md"], (delivery_dir / "道具设定卡.md").exists()),
@@ -620,6 +675,7 @@ def build_manifest(project_dir: Path, delivery_dir: Path, episode_files: list[Pa
     last_ep = detect_episode_number(episode_files[-1])
     episode_numbers = [detect_episode_number(path) for path in episode_files]
     target_episodes = int(metadata["target_episodes"]) if metadata["target_episodes"] else None
+    platform_display = metadata["platform"] or "未在项目文件中写明"
     market_display = metadata["market"] or "未在项目文件中写明"
     target_display = str(target_episodes) if target_episodes is not None else "未在项目文件中写明"
     expected_start = 1 if target_episodes is not None else first_ep
@@ -651,7 +707,8 @@ def build_manifest(project_dir: Path, delivery_dir: Path, episode_files: list[Pa
             "## 一、项目基本信息",
             "",
             f"- 项目名：{metadata['project_name']}",
-            f"- 市场：{market_display}",
+            f"- 发行平台：{platform_display}",
+            f"- 目标市场：{market_display}",
             f"- 形态：{metadata['shape']}",
             f"- 当前交付版本：{version_display}",
             f"- 交付日期：{generated_at}",

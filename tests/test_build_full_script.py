@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import importlib.util
 import json
 import sys
@@ -25,7 +27,8 @@ def create_project(
     target_episodes: int = 2,
     batch_status: str = "已通过",
     delivery_mode: str = "standard",
-    market: str = "抖音国内",
+    market: str = "国内",
+    platform: str | None = "抖音",
     full_script_review_done: bool = True,
     last_completed_phase: str = "全剧复核已通过",
     current_step: str = "交付整合",
@@ -67,8 +70,9 @@ def create_project(
             ensure_ascii=False,
         ),
     )
-    write(project / "00-立项" / "项目简报.md", f"# 项目简报\n\n- 项目名：演示项目\n- 目标市场：{market}\n- 总集数：{target_episodes}\n")
-    write(project / "00-立项" / "锁题摘要.md", f"# 锁题摘要\n\n- 目标市场：{market}\n- 总集数：{target_episodes}\n")
+    platform_line = f"- 发行平台：{platform}\n" if platform else ""
+    write(project / "00-立项" / "项目简报.md", f"# 项目简报\n\n- 项目名：演示项目\n{platform_line}- 目标市场：{market}\n- 总集数：{target_episodes}\n")
+    write(project / "00-立项" / "锁题摘要.md", f"# 锁题摘要\n\n{platform_line}- 目标市场：{market}\n- 总集数：{target_episodes}\n")
     for filename in [
         "项目设定.md",
         "故事梗概.md",
@@ -131,7 +135,12 @@ class BuildFullScriptTests(unittest.TestCase):
 
     def test_production_enhanced_requires_enhanced_files(self):
         with tempfile.TemporaryDirectory() as tmp:
-            project = create_project(Path(tmp), delivery_mode="production-enhanced", market="TikTok 欧美")
+            project = create_project(
+                Path(tmp),
+                delivery_mode="production-enhanced",
+                platform="TikTok",
+                market="美国英语首版",
+            )
 
             with self.assertRaises(build_full_script.DeliveryInputError) as context:
                 build_full_script.validate_delivery_inputs(project, build_full_script.collect_episode_files(project))
@@ -141,9 +150,37 @@ class BuildFullScriptTests(unittest.TestCase):
             self.assertIn("制作理解稿", message)
             self.assertIn("海外制作版分场表", message)
 
+    def test_legacy_combined_tiktok_market_alias_requires_overseas_scene_table(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(
+                Path(tmp),
+                delivery_mode="production-enhanced",
+                platform=None,
+                market="TikTok 欧美",
+            )
+
+            with self.assertRaises(build_full_script.DeliveryInputError) as context:
+                build_full_script.validate_delivery_inputs(project, build_full_script.collect_episode_files(project))
+
+            self.assertIn("海外制作版分场表", str(context.exception))
+
+    def test_tiktok_platform_requires_overseas_scene_table_with_new_market_fields(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(
+                Path(tmp),
+                delivery_mode="production-enhanced",
+                platform="TikTok",
+                market="美国英语首版",
+            )
+
+            with self.assertRaises(build_full_script.DeliveryInputError) as context:
+                build_full_script.validate_delivery_inputs(project, build_full_script.collect_episode_files(project))
+
+            self.assertIn("海外制作版分场表", str(context.exception))
+
     def test_douyin_production_enhanced_requires_clip_brief(self):
         with tempfile.TemporaryDirectory() as tmp:
-            project = create_project(Path(tmp), delivery_mode="production-enhanced", market="抖音国内")
+            project = create_project(Path(tmp), delivery_mode="production-enhanced")
             for name in ["制作理解稿.md", "制作交付参数表.md"]:
                 write(project / "03-交付" / name, f"# {name[:-3]}\n\n正式内容。\n")
 
@@ -154,7 +191,12 @@ class BuildFullScriptTests(unittest.TestCase):
 
     def test_production_enhanced_passes_when_required_enhanced_files_exist(self):
         with tempfile.TemporaryDirectory() as tmp:
-            project = create_project(Path(tmp), delivery_mode="production-enhanced", market="TikTok 欧美")
+            project = create_project(
+                Path(tmp),
+                delivery_mode="production-enhanced",
+                platform="TikTok",
+                market="美国英语首版",
+            )
             for name in ["制作理解稿.md", "制作交付参数表.md", "海外制作版分场表.md"]:
                 write(project / "03-交付" / name, f"# {name[:-3]}\n\n正式内容。\n")
 
@@ -162,7 +204,7 @@ class BuildFullScriptTests(unittest.TestCase):
 
     def test_planning_bible_includes_enhanced_sections(self):
         with tempfile.TemporaryDirectory() as tmp:
-            project = create_project(Path(tmp), delivery_mode="production-enhanced", market="抖音国内")
+            project = create_project(Path(tmp), delivery_mode="production-enhanced")
             for name in ["制作理解稿.md", "制作交付参数表.md", "信息流投放素材切片说明.md"]:
                 write(project / "03-交付" / name, f"# {name[:-3]}\n\n{name} 正式内容。\n")
 
@@ -174,7 +216,7 @@ class BuildFullScriptTests(unittest.TestCase):
 
     def test_planning_bible_demotes_embedded_headings(self):
         with tempfile.TemporaryDirectory() as tmp:
-            project = create_project(Path(tmp), delivery_mode="production-enhanced", market="抖音国内")
+            project = create_project(Path(tmp), delivery_mode="production-enhanced")
             write(project / "03-交付" / "制作理解稿.md", "# 制作理解稿\n\n## 一、项目概览\n\n正式内容。\n")
             write(project / "03-交付" / "制作交付参数表.md", "# 制作交付参数表\n\n## 一、版本来源\n\n正式内容。\n")
             write(project / "03-交付" / "信息流投放素材切片说明.md", "# 信息流投放素材切片说明\n\n## 一、版本信息\n\n正式内容。\n")
