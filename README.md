@@ -153,6 +153,33 @@ $short-drama-scriptwriter 基于当前项目状态继续写第 001-003 集场次
 $short-drama-scriptwriter 当前项目已完成全剧复核，请进入标准交付整合。
 ```
 
+### 对话示例（典型开场）
+
+> **用户**：我想做一个国内 AI 漫剧，校园复仇题材，30 集左右，单集 60-90 秒。
+>
+> **Claude**：好的。我先停在 `/立项 T01` 对话态——按 SKILL.md 边界规则，方向未明确确认前不创建项目目录、不落任何文件。我们先把这几件事在对话里厘清:
+>
+> 1. **目标受众**:女频 / 男频 / 泛受众?校园复仇里"主角姓别 + 受众身份代入点"差异很大。
+> 2. **选题策略**:`主流稳态`(校园复仇标准爽点)/ `类型微创新`(混合元素,如"复仇 + 商战学院")/ `AI-native 视觉型`(强场面切换)/ `高概念创新`?默认不要直接推高概念。
+> 3. **核心压迫机制**:校园题材原生压迫池里——储物柜、缺勤记录、社团排挤、奖学金被截、同伴排挤、家长会曝光、保安/教务处调查...想让主角栽在哪一个上?
+> 4. **AI 漫剧风格**:写实漫画 / romantasy / 国漫 / 日漫 / 欧美漫?这会影响视觉锚点和角色识别策略。
+> 5. **商业化模式**:现在默认 `商业化后置`(只做剧作层追更钩),还是已经定 IAA / IAP / 平台付费?
+>
+> 你先回这 5 个,我会在对话里给候选方向和差异化抓手,等你明确确认后才进 T02 锁题。
+
+---
+
+> **用户**:贴一份 `项目状态.json` 里 `currentStep: 剧本批次, qcStatus.outline: 已通过, scriptProgress.completedRanges: ["001-005"]`,问"接下来写哪批"。
+>
+> **Claude**:恢复现场。当前在 `/剧本` 阶段,大纲已通过质检,EP001-005 已完成。下一步:
+>
+> - 在 `批次写作单-EP006-EP010.md` 里先答 `批次承接 / 旧债回收 / 新增悬念预算 / 关键集 6 节拍`(详见 references/22 第三章决策树)
+> - 写 EP006-007 作为本批代表样稿
+> - 跑 `python3 scripts/check_episode.py --project-dir <project> EP006.md EP007.md` 做硬阈值证据
+> - 然后请你发"对 EP006-EP010 做剧本质检"指令,我用 Task 起 subagent 做 clean-context 复检
+>
+> 我先去把 EP005 的尾钩抄成 EP006 的 `开场承接`,然后写 EP006 的 `1-1 第一动作`。开始吗?
+
 ## 辅助脚本
 
 脚本只做机械整理和可计数检查，**不替代模型读稿质检，也不能单独作为阶段放行依据**。
@@ -185,15 +212,32 @@ python3 scripts/build_full_script.py --check-mode projects/<project-slug>
 
 ```bash
 python3 scripts/check_episode.py \
+  --project-dir projects/<project-slug> \
   --regulation-words "命格,暗文,命债,见证人" \
   projects/<project-slug>/02-剧本/第001集.md
 ```
+
+`--project-dir` 会自动从 `<project>/项目状态.json` 的 `qualityThresholds` 字段加载阈值覆盖,允许按项目调整(例:某些精品项目要求 `min_body_lines_60_90s = 35` 而不是默认 28)。
 
 也可以检查整个剧本目录：
 
 ```bash
 python3 scripts/check_episode.py projects/<project-slug>/02-剧本/
 ```
+
+### 反作弊红线机械检查
+
+扫描立项 / 策划 / 交付下所有 `.md`，检测字段值是否填了违禁词(`待定 / 暂略 / 后补 / TBD / N/A / todo` 等)，以及模板标记 `[MUST] / [SHOULD] / [MAY]` 是否未去掉。命中即 FAIL，可作为独立质检的硬阈值证据附件。
+
+```bash
+# 扫整个项目
+python3 scripts/check_planning.py projects/<project-slug>
+
+# 扫单个文件
+python3 scripts/check_planning.py path/to/项目设定.md
+```
+
+退出码 `1` 表示至少一处违禁；`0` 表示全部通过。
 
 ## 测试
 

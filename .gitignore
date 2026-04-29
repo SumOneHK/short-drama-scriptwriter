@@ -31,3 +31,7 @@ Thumbs.db
 *.log
 tmp/
 temp/
+
+# dogfood 脚本生成的样例项目（开发自测用，不参与正式分发）
+projects/
+dogfood-short-drama-scriptwriter-report.md

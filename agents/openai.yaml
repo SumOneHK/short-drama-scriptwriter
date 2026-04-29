@@ -1,4 +1,31 @@
 interface:
   display_name: "AI竖屏剧/漫剧策划与剧本生成"
   short_description: "AI竖屏剧/漫剧立项、策划、分集剧本与交付"
+  long_description: |
+    面向 AI 制作的竖屏剧 / 漫剧（非真人拍摄）的全流程编剧工作流。
+    覆盖立项选题、剧本圣经设计、分集场次执行稿到 Markdown 交付包，
+    包含状态门禁、独立质检、production-enhanced 制作增强整理。
+    支持抖音国内项目和 TikTok 出海项目（美国英语首版 / 泛欧美 / 东南亚 / 拉美 / 指定地区）。
+    不适用于真人拍摄短剧、分镜、视频提示词、配音脚本或音效表生成。
+
   default_prompt: "使用 $short-drama-scriptwriter 为抖音国内或 TikTok 出海 AI 竖屏剧/漫剧推进立项、策划、分集场次执行稿、复盘和 Markdown 交付。"
+
+  example_prompts:
+    - "使用 $short-drama-scriptwriter，帮我为抖音国内 AI 漫剧做立项选题，目标 60-90 秒单集、30 集左右。"
+    - "使用 $short-drama-scriptwriter，基于当前项目状态继续写第 001-003 集场次执行稿，并按批次做硬阈值检查。"
+    - "使用 $short-drama-scriptwriter，当前项目已完成全剧复核，请进入标准交付整合。"
+    - "使用 $short-drama-scriptwriter，对 EP011-EP015 这一批做 clean-context 剧本质检。"
+    - "使用 $short-drama-scriptwriter，TikTok 美国英语首版 60 集，先做选题策略 / 题材方向沟通。"
+
+  category: "writing"
+  tags:
+    - "短剧"
+    - "AI 漫剧"
+    - "竖屏剧"
+    - "抖音"
+    - "TikTok"
+    - "编剧"
+    - "剧本"
+    - "中文"
+
+  homepage: "https://github.com/SumOneHK/short-drama-scriptwriter"

@@ -122,6 +122,80 @@ class CheckEpisodeTests(unittest.TestCase):
 
             self.assertEqual([path.name for path in episode_files], ["EP001.md"])
 
+    def test_thresholds_default_values_match_legacy_constants(self):
+        t = check_episode.Thresholds()
+        self.assertEqual(t.screen_text_per_scene_limit, check_episode.DEFAULT_SCREEN_TEXT_PER_SCENE_LIMIT)
+        self.assertEqual(t.min_body_lines_60_90s, check_episode.DEFAULT_MIN_BODY_LINES_60_90S)
+        self.assertEqual(t.min_body_lines_first_episode, check_episode.DEFAULT_MIN_BODY_LINES_FIRST_EPISODE)
+
+    def test_thresholds_from_overrides_partial(self):
+        t = check_episode.Thresholds.from_overrides({"screen_text_per_scene_limit": 20})
+        self.assertEqual(t.screen_text_per_scene_limit, 20)
+        # 未覆盖的字段保持默认值
+        self.assertEqual(t.min_body_lines_60_90s, check_episode.DEFAULT_MIN_BODY_LINES_60_90S)
+
+    def test_thresholds_from_overrides_unknown_key_ignored(self):
+        # 非法 key 不应抛异常,只 stderr 警告
+        t = check_episode.Thresholds.from_overrides({"unknown_field": 999, "screen_text_per_scene_limit": 15})
+        self.assertEqual(t.screen_text_per_scene_limit, 15)
+
+    def test_load_thresholds_from_project_state_with_overrides(self):
+        import json as _json
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            (project / "项目状态.json").write_text(
+                _json.dumps(
+                    {
+                        "currentStep": "剧本批次",
+                        "qualityThresholds": {
+                            "screen_text_per_scene_limit": 20,
+                            "min_body_lines_60_90s": 35,
+                        },
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            t = check_episode.load_thresholds_from_project_state(project)
+            self.assertEqual(t.screen_text_per_scene_limit, 20)
+            self.assertEqual(t.min_body_lines_60_90s, 35)
+
+    def test_load_thresholds_returns_defaults_when_no_state_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            t = check_episode.load_thresholds_from_project_state(Path(tmp))
+            self.assertEqual(
+                t.screen_text_per_scene_limit,
+                check_episode.DEFAULT_SCREEN_TEXT_PER_SCENE_LIMIT,
+            )
+
+    def test_check_episode_uses_custom_thresholds(self):
+        # 用自定义紧 prefix_ratio_limit 让一份普通文件触发 FAIL
+        with tempfile.TemporaryDirectory() as tmp:
+            episode_path = Path(tmp) / "第001集.md"
+            write(
+                episode_path,
+                "\n".join(
+                    [
+                        "## 场次正文",
+                        "### 1-1 日内 测试",
+                        "- 承接点：第一行",
+                        "人物：A / B",
+                        "△ 一个动作",
+                        "A：一句台词",
+                        "## 本集回填",
+                    ]
+                ),
+            )
+            tight = check_episode.Thresholds(prefix_ratio_limit=0.1)
+            report = check_episode.check_episode(
+                episode_path,
+                regulation_words=[],
+                target_seconds=75,
+                thresholds=tight,
+            )
+            rules = {v.rule for v in report.violations}
+            self.assertIn("prefix_ratio", rules)
+
 
 if __name__ == "__main__":
     unittest.main()

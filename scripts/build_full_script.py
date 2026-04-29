@@ -7,9 +7,11 @@
 - 出现 `- ` 开头或 `#` 开头的行会被视为当前字段结束
 - 如果模板作者把字段值写成子 bullet，`extract_field` 将只读到空值
 
-历史命名兼容：
-- `项目设定.md` 是当前主名；老项目使用过 `项目圣经.md / season-bible.md`，这里保留回退查找
-- `剧本圣经.md` 是当前主名；老项目使用过 `剧本策划总册.md`，仅在去重交付清单时识别
+历史命名兼容（DEPRECATED，仅服务老项目，新项目不要使用）：
+- `项目设定.md` 是当前主名；老项目曾用过 `项目圣经.md / season-bible.md`，回退查找仅为兼容
+- `剧本圣经.md` 是当前主名；老项目曾用过 `剧本策划总册.md`，仅在去重交付清单时识别
+- 主名以 references/00、references/21 和 assets/templates/ 为准
+- 计划在 2026-Q4 移除：届时这些回退查找会被删，老项目需提前重命名为主名
 """
 from __future__ import annotations
 
@@ -22,6 +24,10 @@ from pathlib import Path
 
 
 # 当前主流程优先读取中文新文件名；旧文件名只作为历史项目兼容回退。
+# DEPRECATED 别名清单（计划 2026-Q4 移除）：
+#   项目圣经.md / season-bible.md → 项目设定.md
+#   project-brief.md             → 项目简报.md
+#   project-lock-summary.md      → 锁题摘要.md
 PREFERRED_FILES = {
     "planning": ["项目设定.md", "项目圣经.md", "season-bible.md"],
     "brief": ["项目简报.md", "project-brief.md"],

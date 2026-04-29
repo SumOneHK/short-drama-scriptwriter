@@ -13,7 +13,11 @@ from datetime import datetime
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[3]
+# 默认把生成项目放在 repo 自身的 projects/ 子目录里（parents[1] = 仓库根）。
+# 旧逻辑用 parents[3]，依赖 ~/.claude/skills/short-drama-scriptwriter/scripts/
+# 这种深层安装路径推断 repo 之上的位置；从 ZIP 解压到 ~/dev/ 等浅层目录时会污染 home。
+# 测试 / CI 通过 monkey-patch ROOT 与 PROJECTS_DIR 自定义输出位置。
+ROOT = Path(__file__).resolve().parents[1]
 PROJECTS_DIR = ROOT / "projects"
 GENERATED_AT = datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -132,18 +136,18 @@ def cn_outline_entries() -> tuple[str, str]:
         )
         details.append(
             f"### EP{i:03d}\n\n"
-            f"- 本集定位：{ep['phase']}第{(i - 1) % 10 + 1}步，推进{ep['secret']}。[MUST]\n"
-            f"- 本集观众一句话（低术语版本）：江闻雪被{ep['pressure']}逼到墙角，反用{ep['asset']}撬开局面。[MUST]\n"
-            f"- 开场承接：{'无可承接' if i == 1 else f'承接 EP{i-1:03d} 的尾钩。'} [MUST]\n"
-            f"- 本集主要出场角色：江闻雪 / 梁策 / 周曼丽 / 荣曜相关人。[MUST]\n"
-            f"- 本集主要冲突：公开证据前，被对手用制度和舆论同时压回去。[MUST]\n"
-            f"- 本集回报类型：证据推进 + 情绪反击。[MUST]\n"
-            f"- 本集主要回报：观众看到{ep['secret']}有实质证据。[MUST]\n"
-            f"- 本集过程链：被压 -> 找证 -> 被截 -> 换打法 -> 留出{ep['hook']}。[MUST]\n"
-            f"- 本集场次承载表：1-1 压迫；1-2 取证；1-3 翻面尾钩。[MUST]\n"
-            f"- 本集剧作层追更设计：情绪回报是{ep['secret']}被看见一角；尾钩 {ep['hook']} 改变下一集取证目标。[MUST]\n"
-            f"- 结尾钩子：{ep['hook']}。[MUST]\n"
-            f"- 下一集接口：从{ep['hook']}继续追证。[MUST]\n"
+            f"- 本集定位：{ep['phase']}第{(i - 1) % 10 + 1}步，推进{ep['secret']}。\n"
+            f"- 本集观众一句话（低术语版本）：江闻雪被{ep['pressure']}逼到墙角，反用{ep['asset']}撬开局面。\n"
+            f"- 开场承接：{'无可承接' if i == 1 else f'承接 EP{i-1:03d} 的尾钩。'}\n"
+            f"- 本集主要出场角色：江闻雪 / 梁策 / 周曼丽 / 荣曜相关人。\n"
+            f"- 本集主要冲突：公开证据前，被对手用制度和舆论同时压回去。\n"
+            f"- 本集回报类型：证据推进 + 情绪反击。\n"
+            f"- 本集主要回报：观众看到{ep['secret']}有实质证据。\n"
+            f"- 本集过程链：被压 -> 找证 -> 被截 -> 换打法 -> 留出{ep['hook']}。\n"
+            f"- 本集场次承载表：1-1 压迫；1-2 取证；1-3 翻面尾钩。\n"
+            f"- 本集剧作层追更设计：情绪回报是{ep['secret']}被看见一角；尾钩 {ep['hook']} 改变下一集取证目标。\n"
+            f"- 结尾钩子：{ep['hook']}。\n"
+            f"- 下一集接口：从{ep['hook']}继续追证。\n"
         )
     return "\n".join(rows), "\n\n".join(details)
 
@@ -160,18 +164,18 @@ def us_outline_entries() -> tuple[str, str]:
         )
         details.append(
             f"### EP{i:03d}\n\n"
-            f"- 本集定位：{ep['phase']} step {(i - 1) % 10 + 1}，推进 {ep['secret']}。[MUST]\n"
-            f"- 本集观众一句话（低术语版本）：Ava 被 {ep['pressure']} 压住，却用 {ep['asset']} 反逼 Hale 家族。[MUST]\n"
-            f"- 开场承接：{'无可承接' if i == 1 else f'承接 EP{i-1:03d} 的尾钩。'} [MUST]\n"
-            f"- 本集主要出场角色：Ava Reed / Mason Hale / Veronica Hale / June Park。[MUST]\n"
-            f"- 本集主要冲突：Ava 想公开证据，Veronica 用 NDA、名誉和 board pressure 压回去。[MUST]\n"
-            f"- 本集回报类型：身份推进 + 权力反击。[MUST]\n"
-            f"- 本集主要回报：观众看到 {ep['secret']} 的可验证证据。[MUST]\n"
-            f"- 本集过程链：threat -> clue -> public pressure -> counter -> {ep['hook']}。[MUST]\n"
-            f"- 本集场次承载表：1-1 threat；1-2 clue；1-3 turn/cliffhanger。[MUST]\n"
-            f"- 本集剧作层追更设计：情绪回报是 {ep['secret']} gets one visible proof；尾钩 {ep['hook']} changes next episode's target。[MUST]\n"
-            f"- 结尾钩子：{ep['hook']}。[MUST]\n"
-            f"- 下一集接口：从 {ep['hook']} 继续推进。[MUST]\n"
+            f"- 本集定位：{ep['phase']} step {(i - 1) % 10 + 1}，推进 {ep['secret']}。\n"
+            f"- 本集观众一句话（低术语版本）：Ava 被 {ep['pressure']} 压住，却用 {ep['asset']} 反逼 Hale 家族。\n"
+            f"- 开场承接：{'无可承接' if i == 1 else f'承接 EP{i-1:03d} 的尾钩。'}\n"
+            f"- 本集主要出场角色：Ava Reed / Mason Hale / Veronica Hale / June Park。\n"
+            f"- 本集主要冲突：Ava 想公开证据，Veronica 用 NDA、名誉和 board pressure 压回去。\n"
+            f"- 本集回报类型：身份推进 + 权力反击。\n"
+            f"- 本集主要回报：观众看到 {ep['secret']} 的可验证证据。\n"
+            f"- 本集过程链：threat -> clue -> public pressure -> counter -> {ep['hook']}。\n"
+            f"- 本集场次承载表：1-1 threat；1-2 clue；1-3 turn/cliffhanger。\n"
+            f"- 本集剧作层追更设计：情绪回报是 {ep['secret']} gets one visible proof；尾钩 {ep['hook']} changes next episode's target。\n"
+            f"- 结尾钩子：{ep['hook']}。\n"
+            f"- 下一集接口：从 {ep['hook']} 继续推进。\n"
         )
     return "\n".join(rows), "\n\n".join(details)
 
@@ -451,30 +455,30 @@ def cn_project() -> None:
 
 ## 一、市场与组合
 
-- 一句话题眼：父亲被城改黑账逼死后，女儿把封口协议变成公开审判。 [MUST]
-- 发行平台：抖音。 [MUST]
-- 目标市场：国内。 [MUST]
-- 目标观众：抖音国内女性向现实复仇观众。 [MUST]
-- 题材类型组合：都市复仇 / 法律商战 / 家族旧案。 [SHOULD]
-- 选题策略：主流稳态 + AI-native 视觉型。 [MUST]
-- 目标市场原生承诺：压迫来自城改、赔偿协议、老赖标签、直播切流和执行程序。 [MUST]
-- 母体来源市场：无母体。 [MUST]
+- 一句话题眼：父亲被城改黑账逼死后，女儿把封口协议变成公开审判。
+- 发行平台：抖音。
+- 目标市场：国内。
+- 目标观众：抖音国内女性向现实复仇观众。
+- 题材类型组合：都市复仇 / 法律商战 / 家族旧案。
+- 选题策略：主流稳态 + AI-native 视觉型。
+- 目标市场原生承诺：压迫来自城改、赔偿协议、老赖标签、直播切流和执行程序。
+- 母体来源市场：无母体。
 
 ## 二、故事引擎
 
-- 观众为什么点开：普通女孩在父亲追悼会拒签封口协议，当场反念旧合同。 [MUST]
-- 连载引擎一句话：每 10 集拆一层荣曜集团黑账。 [MUST]
-- 核心压迫来源：荣曜集团用制度和舆论压迫受害者家属。 [MUST]
-- 压迫→爽点映射：每次对手用制度堵路，江闻雪就把同一制度变成证据出口。 [MUST]
-- 观众为什么追：EP003 看到第一份假验收，EP010 看到第一轮公开反击，EP030 看到母亲旧案翻面，EP060 看到终局开庭。 [MUST]
-- 阶段回报节奏：10 集一层证据，20 集一层身份，45 集公开清算，60 集终局闭环。 [MUST]
+- 观众为什么点开：普通女孩在父亲追悼会拒签封口协议，当场反念旧合同。
+- 连载引擎一句话：每 10 集拆一层荣曜集团黑账。
+- 核心压迫来源：荣曜集团用制度和舆论压迫受害者家属。
+- 压迫→爽点映射：每次对手用制度堵路，江闻雪就把同一制度变成证据出口。
+- 观众为什么追：EP003 看到第一份假验收，EP010 看到第一轮公开反击，EP030 看到母亲旧案翻面，EP060 看到终局开庭。
+- 阶段回报节奏：10 集一层证据，20 集一层身份，45 集公开清算，60 集终局闭环。
 
 ## 三、AI 制作口径
 
-- AI 漫剧风格：冷色都市、文件证据、会议室对峙、雨夜楼道。 [MUST]
-- 高复用资产策略：调解室 / 老楼 / 律所 / 荣曜会议室 / 听证厅循环复用。 [MUST]
-- 下游镜头接口口径：群像大场面必须拆成近景、道具、灯光和文件推进。 [MUST]
-- 禁止跑偏项：不写玄学开挂，不写无证私刑。 [SHOULD]
+- AI 漫剧风格：冷色都市、文件证据、会议室对峙、雨夜楼道。
+- 高复用资产策略：调解室 / 老楼 / 律所 / 荣曜会议室 / 听证厅循环复用。
+- 下游镜头接口口径：群像大场面必须拆成近景、道具、灯光和文件推进。
+- 禁止跑偏项：不写玄学开挂，不写无证私刑。
 
 ## 四、资产与制作
 
@@ -486,10 +490,10 @@ def cn_project() -> None:
 
 ## 五、市场本地化锚点
 
-- 题材原生压迫机构 / 道具：城改、赔偿协议、老赖标签、执行程序、直播切流。 [MUST]
-- 主流爽点 / 价值观弧光：公开清算、寒门反击、证据说话。 [MUST]
-- 价值观红线规避：不美化私刑，不承诺超现实司法结果。 [MUST]
-- 地域 / 阶层锚点：新一线城改、老楼业主、集团公关。 [SHOULD]
+- 题材原生压迫机构 / 道具：城改、赔偿协议、老赖标签、执行程序、直播切流。
+- 主流爽点 / 价值观弧光：公开清算、寒门反击、证据说话。
+- 价值观红线规避：不美化私刑，不承诺超现实司法结果。
+- 地域 / 阶层锚点：新一线城改、老楼业主、集团公关。
 """,
     )
     write(
@@ -515,65 +519,65 @@ def cn_project() -> None:
 
 ## 一、角色关系总览
 
-- 主关系一句话：江闻雪和梁策从互不信任的证据同盟变成共同开庭的战友。 [MUST]
-- 主角压力来源：父亲旧案、母亲失踪、债务标签、集团公关。 [MUST]
-- 核心对手压迫方式：周曼丽用协议、公示、舆论和证人调包压回去。 [MUST]
-- 核心关系位拉扯方式：梁策怕她越界，江闻雪怕他只求稳。 [MUST]
+- 主关系一句话：江闻雪和梁策从互不信任的证据同盟变成共同开庭的战友。
+- 主角压力来源：父亲旧案、母亲失踪、债务标签、集团公关。
+- 核心对手压迫方式：周曼丽用协议、公示、舆论和证人调包压回去。
+- 核心关系位拉扯方式：梁策怕她越界，江闻雪怕他只求稳。
 
 ## 二、主要角色
 
 ### 江闻雪
 
-- 剧情功能：主角，证据链推动者。 [MUST]
-- 身份与处境：前法务助理，父亲事故后背债。 [MUST]
-- 想要什么：证明父亲不是老赖，公开荣曜黑账。 [MUST]
-- 被谁/什么压迫：荣曜集团、债务标签、执行程序。 [MUST]
-- 反击方式：把对手文件变成公开证据。 [MUST]
-- 与主线的关系：每一集由她推动证据升级。 [MUST]
-- 外形关键词：黑短发、旧风衣、文件袋。 [SHOULD]
-- 固定识别锚点：蓝色旧协议夹。 [SHOULD]
-- 首次出场必须交代的信息：追悼会拒签封口协议。 [SHOULD]
-- 终局状态：在庭审上完成公开清算。 [MUST]
+- 剧情功能：主角，证据链推动者。
+- 身份与处境：前法务助理，父亲事故后背债。
+- 想要什么：证明父亲不是老赖，公开荣曜黑账。
+- 被谁/什么压迫：荣曜集团、债务标签、执行程序。
+- 反击方式：把对手文件变成公开证据。
+- 与主线的关系：每一集由她推动证据升级。
+- 外形关键词：黑短发、旧风衣、文件袋。
+- 固定识别锚点：蓝色旧协议夹。
+- 首次出场必须交代的信息：追悼会拒签封口协议。
+- 终局状态：在庭审上完成公开清算。
 
 ### 梁策
 
-- 剧情功能：律师同盟，程序边界提醒者。 [MUST]
-- 身份与处境：被律所边缘化的青年律师。 [MUST]
-- 想要什么：赢一个干净的案子。 [MUST]
-- 被谁/什么压迫：律所利益和职业风险。 [MUST]
-- 反击方式：用程序把江闻雪的证据变成可提交材料。 [MUST]
-- 与主线的关系：把情绪反击转成法律动作。 [MUST]
-- 终局状态：出庭代理再审。 [MUST]
+- 剧情功能：律师同盟，程序边界提醒者。
+- 身份与处境：被律所边缘化的青年律师。
+- 想要什么：赢一个干净的案子。
+- 被谁/什么压迫：律所利益和职业风险。
+- 反击方式：用程序把江闻雪的证据变成可提交材料。
+- 与主线的关系：把情绪反击转成法律动作。
+- 终局状态：出庭代理再审。
 
 ### 周曼丽
 
-- 剧情功能：核心反派，荣曜集团公关与旧案掩盖者。 [MUST]
-- 身份与处境：荣曜副总，掌握城改公关线。 [MUST]
-- 想要什么：压住旧案，保住上市审查。 [MUST]
-- 被谁/什么压迫：董事会和旧账册。 [MUST]
-- 反击方式：切流、换证人、造舆论。 [MUST]
-- 与主线的关系：每阶段制造新制度压迫。 [MUST]
-- 终局状态：在庭审前夜被原始账册锁死。 [MUST]
+- 剧情功能：核心反派，荣曜集团公关与旧案掩盖者。
+- 身份与处境：荣曜副总，掌握城改公关线。
+- 想要什么：压住旧案，保住上市审查。
+- 被谁/什么压迫：董事会和旧账册。
+- 反击方式：切流、换证人、造舆论。
+- 与主线的关系：每阶段制造新制度压迫。
+- 终局状态：在庭审前夜被原始账册锁死。
 """,
     )
     write(
         project / "01-策划" / "故事梗概.md",
         f"""# 故事梗概
 
-- 类型与题眼：都市现实复仇，女儿把封口协议变成公开审判。 [MUST]
-- 主角与开局困境：江闻雪在父亲追悼会上被逼签赔偿协议。 [MUST]
-- 主目标：证明父亲旧案背后是荣曜集团城改黑账。 [MUST]
-- 主要对手与核心对抗：周曼丽用制度和舆论压人，江闻雪用证据和公开程序反击。 [MUST]
-- 主卖点与续看理由：每 10 集拆开一层黑账，每层都有可见证据和公开反击。 [MUST]
-- 中段升级：母亲失踪线索与城改验收造假合流。 [MUST]
-- 终局兑现：江闻雪把所有封口材料带上庭，完成公开清算。 [MUST]
+- 类型与题眼：都市现实复仇，女儿把封口协议变成公开审判。
+- 主角与开局困境：江闻雪在父亲追悼会上被逼签赔偿协议。
+- 主目标：证明父亲旧案背后是荣曜集团城改黑账。
+- 主要对手与核心对抗：周曼丽用制度和舆论压人，江闻雪用证据和公开程序反击。
+- 主卖点与续看理由：每 10 集拆开一层黑账，每层都有可见证据和公开反击。
+- 中段升级：母亲失踪线索与城改验收造假合流。
+- 终局兑现：江闻雪把所有封口材料带上庭，完成公开清算。
 """,
     )
     write(
         project / "01-策划" / "故事大纲.md",
         """# 故事大纲
 
-- 全剧升级链一句话：拒签封口 -> 入局取证 -> 母亲旧案翻面 -> 公开听证 -> 低谷护证 -> 终局开庭。 [MUST]
+- 全剧升级链一句话：拒签封口 -> 入局取证 -> 母亲旧案翻面 -> 公开听证 -> 低谷护证 -> 终局开庭。
 
 | 阶段 | 阶段目标 | 主要阻力 | 推进方式 | 关键翻面 | 阶段回报 | 接口遗留 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -681,30 +685,30 @@ def us_project() -> None:
 
 ## 一、市场与组合
 
-- 一句话题眼：A broke intern refuses an NDA and becomes the only person who can break Hale House. [MUST]
-- 发行平台：TikTok。 [MUST]
-- 目标市场：美国英语首版。 [MUST]
-- 目标观众：TikTok 美国英语女性向 revenge / hidden-heir 观众。 [MUST]
-- 题材类型组合：Hidden heiress / corporate family / campus cancellation。 [SHOULD]
-- 选题策略：主流稳态 + 类型微创新。 [MUST]
-- 目标市场原生承诺：压迫来自 NDA、trust board、restraining order、shadow ban 和 donor politics。 [MUST]
-- 母体来源市场：无母体。 [MUST]
+- 一句话题眼：A broke intern refuses an NDA and becomes the only person who can break Hale House.
+- 发行平台：TikTok。
+- 目标市场：美国英语首版。
+- 目标观众：TikTok 美国英语女性向 revenge / hidden-heir 观众。
+- 题材类型组合：Hidden heiress / corporate family / campus cancellation。
+- 选题策略：主流稳态 + 类型微创新。
+- 目标市场原生承诺：压迫来自 NDA、trust board、restraining order、shadow ban 和 donor politics。
+- 母体来源市场：无母体。
 
 ## 二、故事引擎
 
-- 观众为什么点开：Ava 在 trust office 当场拒签 NDA。 [MUST]
-- 连载引擎一句话：每 10 集 Ava 破解一层 Hale 家族封口系统。 [MUST]
-- 核心压迫来源：Veronica 用 NDA、board vote 和舆论取消压 Ava。 [MUST]
-- 压迫→爽点映射：每个法律/名誉压迫都被 Ava 反用成公开证据。 [MUST]
-- 观众为什么追：身份、继承、背叛和公开反击逐层升级。 [MUST]
-- 阶段回报节奏：10 集一个 public proof，30 集身份翻面，60 集 trust vote 终局。 [MUST]
+- 观众为什么点开：Ava 在 trust office 当场拒签 NDA。
+- 连载引擎一句话：每 10 集 Ava 破解一层 Hale 家族封口系统。
+- 核心压迫来源：Veronica 用 NDA、board vote 和舆论取消压 Ava。
+- 压迫→爽点映射：每个法律/名誉压迫都被 Ava 反用成公开证据。
+- 观众为什么追：身份、继承、背叛和公开反击逐层升级。
+- 阶段回报节奏：10 集一个 public proof，30 集身份翻面，60 集 trust vote 终局。
 
 ## 三、AI 制作口径
 
-- AI 漫剧风格：sleek campus noir, glass offices, laundry room secrets, boardroom confrontation. [MUST]
-- 高复用资产策略：Trust office / campus steps / dorm laundry / Hale boardroom / hearing room. [MUST]
-- 下游镜头接口口径：大型派对和群像必须拆成近景、文件、手机和门口对峙推进。 [MUST]
-- 禁止跑偏项：不写中式威胁句，不靠暴力私刑推进。 [SHOULD]
+- AI 漫剧风格：sleek campus noir, glass offices, laundry room secrets, boardroom confrontation.
+- 高复用资产策略：Trust office / campus steps / dorm laundry / Hale boardroom / hearing room.
+- 下游镜头接口口径：大型派对和群像必须拆成近景、文件、手机和门口对峙推进。
+- 禁止跑偏项：不写中式威胁句，不靠暴力私刑推进。
 
 ## 四、资产与制作
 
@@ -716,11 +720,11 @@ def us_project() -> None:
 
 ## 五、市场本地化锚点
 
-- 题材原生压迫机构 / 道具：NDA、trust board、restraining order、shadow ban、donor list。 [MUST]
-- 主流爽点 / 价值观弧光：Underdog, reinvention, found family, public accountability。 [MUST]
-- 价值观红线规避：不美化 gaslighting / love bombing / DV。 [MUST]
-- 地域 / 阶层锚点：East Coast private campus, legacy donor family, media trust。 [SHOULD]
-- 节日 / 季节钩点：Thanksgiving board dinner 可用于 EP041-045。 [MAY，海外项目或节日钩点项目必填]
+- 题材原生压迫机构 / 道具：NDA、trust board、restraining order、shadow ban、donor list。
+- 主流爽点 / 价值观弧光：Underdog, reinvention, found family, public accountability。
+- 价值观红线规避：不美化 gaslighting / love bombing / DV。
+- 地域 / 阶层锚点：East Coast private campus, legacy donor family, media trust。
+- 节日 / 季节钩点：Thanksgiving board dinner 可用于 EP041-045。
 """,
     )
     write(
@@ -745,65 +749,65 @@ def us_project() -> None:
 
 ## 一、角色关系总览
 
-- 主关系一句话：Ava 和 Mason 从互相隐瞒的继承关系变成共同破局的危险同盟。 [MUST]
-- 主角压力来源：NDA、贫困、身份抹除、public shame。 [MUST]
-- 核心对手压迫方式：Veronica 用 trust board、media narrative 和 legal threat 压回去。 [MUST]
-- 核心关系位拉扯方式：Mason 想 quietly fix，Ava 必须 publicly expose。 [MUST]
+- 主关系一句话：Ava 和 Mason 从互相隐瞒的继承关系变成共同破局的危险同盟。
+- 主角压力来源：NDA、贫困、身份抹除、public shame。
+- 核心对手压迫方式：Veronica 用 trust board、media narrative 和 legal threat 压回去。
+- 核心关系位拉扯方式：Mason 想 quietly fix，Ava 必须 publicly expose。
 
 ## 二、主要角色
 
 ### Ava Reed
 
-- 剧情功能：主角，hidden heiress 与 public proof 推动者。 [MUST]
-- 身份与处境：贫困实习生，被 Hale House 用 NDA 封口。 [MUST]
-- 想要什么：证明母亲和自己被 Hale family 抹除。 [MUST]
-- 被谁/什么压迫：Veronica、trust board、campus discipline、shadow ban。 [MUST]
-- 反击方式：把私人证据变成公开证据。 [MUST]
-- 与主线的关系：所有身份证据由她推进。 [MUST]
-- 外形关键词：dark ponytail, thrift blazer, cracked phone。 [SHOULD]
-- 固定识别锚点：cheap USB drive on a keyring。 [SHOULD]
-- 首次出场必须交代的信息：拒签 NDA。 [SHOULD]
-- 终局状态：赢下 trust vote 但拒绝成为 Veronica。 [MUST]
+- 剧情功能：主角，hidden heiress 与 public proof 推动者。
+- 身份与处境：贫困实习生，被 Hale House 用 NDA 封口。
+- 想要什么：证明母亲和自己被 Hale family 抹除。
+- 被谁/什么压迫：Veronica、trust board、campus discipline、shadow ban。
+- 反击方式：把私人证据变成公开证据。
+- 与主线的关系：所有身份证据由她推进。
+- 外形关键词：dark ponytail, thrift blazer, cracked phone。
+- 固定识别锚点：cheap USB drive on a keyring。
+- 首次出场必须交代的信息：拒签 NDA。
+- 终局状态：赢下 trust vote 但拒绝成为 Veronica。
 
 ### Mason Hale
 
-- 剧情功能：关系位与内部通道。 [MUST]
-- 身份与处境：Hale heir on paper, privately doubts the family story。 [MUST]
-- 想要什么：keep control without destroying the family。 [MUST]
-- 被谁/什么压迫：Veronica and the board。 [MUST]
-- 反击方式：leaks access, then testifies。 [MUST]
-- 与主线的关系：把 Ava 带进 Hale House。 [MUST]
-- 终局状态：公开站到 Ava 一边。 [MUST]
+- 剧情功能：关系位与内部通道。
+- 身份与处境：Hale heir on paper, privately doubts the family story。
+- 想要什么：keep control without destroying the family。
+- 被谁/什么压迫：Veronica and the board。
+- 反击方式：leaks access, then testifies。
+- 与主线的关系：把 Ava 带进 Hale House。
+- 终局状态：公开站到 Ava 一边。
 
 ### Veronica Hale
 
-- 剧情功能：核心反派。 [MUST]
-- 身份与处境：Hale House 控制者。 [MUST]
-- 想要什么：protect the trust vote and erase Ava's claim。 [MUST]
-- 被谁/什么压迫：old ledger and donor exposure。 [MUST]
-- 反击方式：NDA, smear campaign, board pressure。 [MUST]
-- 与主线的关系：每阶段制造制度压迫。 [MUST]
-- 终局状态：最后一个 NDA 反噬。 [MUST]
+- 剧情功能：核心反派。
+- 身份与处境：Hale House 控制者。
+- 想要什么：protect the trust vote and erase Ava's claim。
+- 被谁/什么压迫：old ledger and donor exposure。
+- 反击方式：NDA, smear campaign, board pressure。
+- 与主线的关系：每阶段制造制度压迫。
+- 终局状态：最后一个 NDA 反噬。
 """,
     )
     write(
         project / "01-策划" / "故事梗概.md",
         """# 故事梗概
 
-- 类型与题眼：Hidden heiress revenge about refusing an NDA. [MUST]
-- 主角与开局困境：Ava is a broke intern pressured to sign away her claim. [MUST]
-- 主目标：prove she is the erased Hale heir and expose the trust cover-up. [MUST]
-- 主要对手与核心对抗：Veronica controls money, law, and media; Ava controls public proof. [MUST]
-- 主卖点与续看理由：every ten episodes breaks one legal/social lock. [MUST]
-- 中段升级：Ava's birth record and her mother's cover-up join the inheritance plot. [MUST]
-- 终局兑现：Ava breaks the final trust vote in front of the board. [MUST]
+- 类型与题眼：Hidden heiress revenge about refusing an NDA.
+- 主角与开局困境：Ava is a broke intern pressured to sign away her claim.
+- 主目标：prove she is the erased Hale heir and expose the trust cover-up.
+- 主要对手与核心对抗：Veronica controls money, law, and media; Ava controls public proof.
+- 主卖点与续看理由：every ten episodes breaks one legal/social lock.
+- 中段升级：Ava's birth record and her mother's cover-up join the inheritance plot.
+- 终局兑现：Ava breaks the final trust vote in front of the board.
 """,
     )
     write(
         project / "01-策划" / "故事大纲.md",
         """# 故事大纲
 
-- 全剧升级链一句话：refuse NDA -> enter Hale House -> identity turn -> board hearing -> protect whistleblower -> final trust vote. [MUST]
+- 全剧升级链一句话：refuse NDA -> enter Hale House -> identity turn -> board hearing -> protect whistleblower -> final trust vote.
 
 | 阶段 | 阶段目标 | 主要阻力 | 推进方式 | 关键翻面 | 阶段回报 | 接口遗留 |
 | --- | --- | --- | --- | --- | --- | --- |

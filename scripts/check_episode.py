@@ -16,9 +16,10 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, replace
 from pathlib import Path
 
 
@@ -33,8 +34,68 @@ DEFAULT_REGULATION_WORD_PER_EPISODE_LIMIT = 3  # 规则词整集累计上限
 DEFAULT_PREFIX_RATIO_LIMIT = 1 / 3  # 前置字段行数 / 正文行数 上限
 
 DEFAULT_MIN_BODY_LINES_60_90S = 28  # 60-90 秒规格最少正文行数
+DEFAULT_MIN_BODY_LINES_90_120S = 34  # 90-120 秒规格最少正文行数
 DEFAULT_MIN_BODY_LINES_45_75S = 22  # 45-75 秒规格最少正文行数
 DEFAULT_MIN_BODY_LINES_FIRST_EPISODE = 34  # 首集最少正文行数
+
+
+# ===== 阈值容器（项目级覆盖） =====
+
+
+@dataclass(frozen=True)
+class Thresholds:
+    """所有阈值的项目级容器。
+
+    项目可以在 `项目状态.json` 的 `qualityThresholds` 字段里覆盖任意子集；
+    未覆盖的字段保持 references/12 第三章的默认值。
+    """
+
+    screen_text_per_scene_limit: int = DEFAULT_SCREEN_TEXT_PER_SCENE_LIMIT
+    screen_text_per_episode_limit: int = DEFAULT_SCREEN_TEXT_PER_EPISODE_LIMIT
+    diegetic_text_per_line_warn_limit: int = DEFAULT_DIEGETIC_TEXT_PER_LINE_WARN_LIMIT
+    diegetic_text_per_episode_warn_limit: int = DEFAULT_DIEGETIC_TEXT_PER_EPISODE_WARN_LIMIT
+    regulation_word_per_scene_limit: int = DEFAULT_REGULATION_WORD_PER_SCENE_LIMIT
+    regulation_word_per_episode_limit: int = DEFAULT_REGULATION_WORD_PER_EPISODE_LIMIT
+    prefix_ratio_limit: float = DEFAULT_PREFIX_RATIO_LIMIT
+    min_body_lines_60_90s: int = DEFAULT_MIN_BODY_LINES_60_90S
+    min_body_lines_90_120s: int = DEFAULT_MIN_BODY_LINES_90_120S
+    min_body_lines_45_75s: int = DEFAULT_MIN_BODY_LINES_45_75S
+    min_body_lines_first_episode: int = DEFAULT_MIN_BODY_LINES_FIRST_EPISODE
+
+    @classmethod
+    def from_overrides(cls, overrides: dict | None) -> "Thresholds":
+        """从字典构造：未提供的键保持默认值；非法 key 直接忽略并 stderr 警告。"""
+        base = cls()
+        if not isinstance(overrides, dict):
+            return base
+        valid_keys = {f.name for f in fields(cls)}
+        kwargs = {}
+        for key, value in overrides.items():
+            if key not in valid_keys:
+                sys.stderr.write(
+                    f"[WARN] qualityThresholds 出现未知字段 `{key}`，已忽略。\n"
+                )
+                continue
+            kwargs[key] = value
+        return replace(base, **kwargs)
+
+
+def load_thresholds_from_project_state(project_dir: Path) -> Thresholds:
+    """从 `<project>/项目状态.json` 的 `qualityThresholds` 字段加载阈值覆盖。
+
+    文件不存在 / JSON 不合法 / 没有 qualityThresholds 字段时，返回默认值。
+    """
+    state_path = project_dir / "项目状态.json"
+    if not state_path.exists():
+        return Thresholds()
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        sys.stderr.write(f"[WARN] {state_path} 不是合法 JSON：{exc}；阈值回退默认值。\n")
+        return Thresholds()
+    if not isinstance(state, dict):
+        return Thresholds()
+    return Thresholds.from_overrides(state.get("qualityThresholds"))
 
 # ===== 数据结构 =====
 
@@ -415,8 +476,16 @@ def check_episode(
     regulation_words: list[str],
     target_seconds: int = 75,
     is_first_episode: bool = False,
+    thresholds: Thresholds | None = None,
 ) -> EpisodeReport:
-    """校验单集场次执行稿。"""
+    """校验单集场次执行稿。
+
+    `thresholds` 不传时使用 `Thresholds()` 的默认值；项目级覆盖应该由调用方
+    通过 `load_thresholds_from_project_state()` 提前装载好后传进来。
+    """
+    if thresholds is None:
+        thresholds = Thresholds()
+
     text = episode_path.read_text(encoding="utf-8")
     scenes = split_into_scenes(text)
     violations: list[Violation] = []
@@ -456,12 +525,12 @@ def check_episode(
         # 1. 前置字段比例
         if body_lines > 0:
             ratio = prefix_lines / body_lines
-            if ratio > DEFAULT_PREFIX_RATIO_LIMIT:
+            if ratio > thresholds.prefix_ratio_limit:
                 violations.append(
                     Violation(
                         severity="FAIL",
                         rule="prefix_ratio",
-                        detail=f"前置字段 {prefix_lines} 行 / 正文 {body_lines} 行 = {ratio:.2f}，超过 1/3 阈值",
+                        detail=f"前置字段 {prefix_lines} 行 / 正文 {body_lines} 行 = {ratio:.2f}，超过 {thresholds.prefix_ratio_limit:.2f} 阈值",
                         location=heading,
                     )
                 )
@@ -475,14 +544,14 @@ def check_episode(
 
             if item.category == "diegetic":
                 total_diegetic_chars += item.char_count
-                if item.char_count > DEFAULT_DIEGETIC_TEXT_PER_LINE_WARN_LIMIT:
+                if item.char_count > thresholds.diegetic_text_per_line_warn_limit:
                     violations.append(
                         Violation(
                             severity="WARN",
                             rule="diegetic_text_per_line",
                             detail=(
                                 f"画内文字 {item.char_count} 字超过单条建议 "
-                                f"{DEFAULT_DIEGETIC_TEXT_PER_LINE_WARN_LIMIT} 字：'{item.content}'"
+                                f"{thresholds.diegetic_text_per_line_warn_limit} 字：'{item.content}'"
                             ),
                             location=heading,
                         )
@@ -490,12 +559,12 @@ def check_episode(
                 continue
 
             total_screen_chars += item.char_count
-            if item.char_count > DEFAULT_SCREEN_TEXT_PER_SCENE_LIMIT:
+            if item.char_count > thresholds.screen_text_per_scene_limit:
                 violations.append(
                     Violation(
                         severity="FAIL",
                         rule="screen_text_per_line",
-                        detail=f"叠加屏幕字 {item.char_count} 字超过单条 {DEFAULT_SCREEN_TEXT_PER_SCENE_LIMIT} 字阈值：'{item.content}'",
+                        detail=f"叠加屏幕字 {item.char_count} 字超过单条 {thresholds.screen_text_per_scene_limit} 字阈值：'{item.content}'",
                         location=heading,
                     )
                 )
@@ -506,61 +575,61 @@ def check_episode(
             scene_regulation_count = sum(counts.values())
             total_regulation_count += scene_regulation_count
             for word, count in counts.items():
-                if count > DEFAULT_REGULATION_WORD_PER_SCENE_LIMIT:
+                if count > thresholds.regulation_word_per_scene_limit:
                     violations.append(
                         Violation(
                             severity="FAIL",
                             rule="regulation_word_per_scene",
-                            detail=f"规则词 '{word}' 在本场出现 {count} 次，超过单场 {DEFAULT_REGULATION_WORD_PER_SCENE_LIMIT} 次阈值",
+                            detail=f"规则词 '{word}' 在本场出现 {count} 次，超过单场 {thresholds.regulation_word_per_scene_limit} 次阈值",
                             location=heading,
                         )
                     )
 
     # 4. 叠加屏幕字整集字数
-    if total_screen_chars > DEFAULT_SCREEN_TEXT_PER_EPISODE_LIMIT:
+    if total_screen_chars > thresholds.screen_text_per_episode_limit:
         violations.append(
             Violation(
                 severity="FAIL",
                 rule="screen_text_per_episode",
-                detail=f"叠加屏幕字累计 {total_screen_chars} 字超过整集 {DEFAULT_SCREEN_TEXT_PER_EPISODE_LIMIT} 字阈值",
+                detail=f"叠加屏幕字累计 {total_screen_chars} 字超过整集 {thresholds.screen_text_per_episode_limit} 字阈值",
             )
         )
 
     # 4.5 画内信息字整集可读性提示
-    if total_diegetic_chars > DEFAULT_DIEGETIC_TEXT_PER_EPISODE_WARN_LIMIT:
+    if total_diegetic_chars > thresholds.diegetic_text_per_episode_warn_limit:
         violations.append(
             Violation(
                 severity="WARN",
                 rule="diegetic_text_per_episode",
                 detail=(
                     f"画内文字累计 {total_diegetic_chars} 字超过整集建议 "
-                    f"{DEFAULT_DIEGETIC_TEXT_PER_EPISODE_WARN_LIMIT} 字；需人工确认没有变成读材料"
+                    f"{thresholds.diegetic_text_per_episode_warn_limit} 字；需人工确认没有变成读材料"
                 ),
             )
         )
 
     # 5. 规则词整集频次
-    if total_regulation_count > DEFAULT_REGULATION_WORD_PER_EPISODE_LIMIT:
+    if total_regulation_count > thresholds.regulation_word_per_episode_limit:
         violations.append(
             Violation(
                 severity="FAIL",
                 rule="regulation_word_per_episode",
-                detail=f"规则词累计 {total_regulation_count} 次超过整集 {DEFAULT_REGULATION_WORD_PER_EPISODE_LIMIT} 次阈值",
+                detail=f"规则词累计 {total_regulation_count} 次超过整集 {thresholds.regulation_word_per_episode_limit} 次阈值",
             )
         )
 
     # 6. 有效正文行数下限
     if is_first_episode:
-        min_body_lines = DEFAULT_MIN_BODY_LINES_FIRST_EPISODE
+        min_body_lines = thresholds.min_body_lines_first_episode
         spec_label = "首集"
     elif target_seconds >= 90:
-        min_body_lines = 34
+        min_body_lines = thresholds.min_body_lines_90_120s
         spec_label = "90-120 秒规格"
     elif target_seconds >= 60:
-        min_body_lines = DEFAULT_MIN_BODY_LINES_60_90S
+        min_body_lines = thresholds.min_body_lines_60_90s
         spec_label = "60-90 秒规格"
     else:
-        min_body_lines = DEFAULT_MIN_BODY_LINES_45_75S
+        min_body_lines = thresholds.min_body_lines_45_75s
         spec_label = "45-75 秒规格"
 
     if total_body < min_body_lines:
@@ -643,6 +712,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="标记为首集（按首集加长口径检查正文下限）",
     )
+    parser.add_argument(
+        "--project-dir",
+        default="",
+        help="项目根目录路径；如指定，从 <project>/项目状态.json 的 qualityThresholds 字段加载阈值覆盖",
+    )
     args = parser.parse_args(argv)
 
     target = Path(args.target).expanduser().resolve()
@@ -655,6 +729,22 @@ def main(argv: list[str] | None = None) -> int:
 
     regulation_words = [w for w in args.regulation_words.split(",") if w.strip()]
 
+    # 加载阈值：优先按 --project-dir，未给时尝试从 target 推断
+    thresholds = Thresholds()
+    if args.project_dir:
+        project_dir = Path(args.project_dir).expanduser().resolve()
+        thresholds = load_thresholds_from_project_state(project_dir)
+    else:
+        # 启发式：如果 target 是项目子路径（包含 02-剧本/ 或 第NNN集.md），向上找到项目根
+        candidate = target if target.is_dir() else target.parent
+        for _ in range(3):
+            if (candidate / "项目状态.json").exists():
+                thresholds = load_thresholds_from_project_state(candidate)
+                break
+            if candidate.parent == candidate:
+                break
+            candidate = candidate.parent
+
     has_failure = False
     for path in episode_files:
         is_first = args.first_episode or detect_episode_number(path) == 1
@@ -663,6 +753,7 @@ def main(argv: list[str] | None = None) -> int:
             regulation_words=regulation_words,
             target_seconds=args.target_seconds,
             is_first_episode=is_first,
+            thresholds=thresholds,
         )
         print(format_report(report))
         if not report.passed:
